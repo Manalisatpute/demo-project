@@ -5,22 +5,38 @@ on:
     branches: [ main ]
 
 jobs:
-  deploy:
+  checkout:
     runs-on: self-hosted
-
+    outputs:
+      workspace-path: ${{ steps.set-output.outputs.path }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Set workspace path
+        id: set-output
+        run: echo "::set-output name=path::$(pwd)"
+
+  build:
+    needs: checkout
+    runs-on: self-hosted
+    steps:
       - name: Build Docker image
         run: docker build -t flask-local-runner .
 
-      - name: Stop old container (if running)
+  stop_container:
+    needs: build
+    runs-on: self-hosted
+    steps:
+      - name: Stop and remove old container
         run: |
           docker stop flask-running-container || true
           docker rm flask-running-container || true
 
-      - name: Run Docker container
+  deploy:
+    needs: stop_container
+    runs-on: self-hosted
+    steps:
+      - name: Run new Docker container
         run: |
           docker run -d --name flask-running-container -p 5000:5000 flask-local-runner
-
