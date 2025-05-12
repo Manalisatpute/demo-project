@@ -1,0 +1,26 @@
+name: Deploy on Self-Hosted Runner
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: docker build -t flask-local-runner .
+
+      - name: Stop old container (if running)
+        run: |
+          docker stop flask-running-container || true
+          docker rm flask-running-container || true
+
+      - name: Run Docker container
+        run: |
+          docker run -d --name flask-running-container -p 5000:5000 flask-local-runner
+
